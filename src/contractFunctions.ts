@@ -1,12 +1,12 @@
 import Web3 from "web3";
 import { Contract } from "web3-eth-contract";
-import { AbiItem } from "web3-utils"; 
+import { AbiItem } from "web3-utils";
 
 type StakeParams = {
   userAccount: string;
   privateKey: string;
-  stakingContract: Contract<AbiItem[]>; 
-  erc20Abi: AbiItem[]; 
+  stakingContract: Contract<AbiItem[]>;
+  erc20Abi: AbiItem[];
   amount: string;
 };
 
@@ -21,10 +21,13 @@ export const stakeTokens = async ({
 }: StakeParams): Promise<void> => {
   const stakingTokenAddress = await stakingContract.methods.stakingToken().call();
   
-  
+  if (typeof stakingTokenAddress !== "string" || stakingTokenAddress === "0x0000000000000000000000000000000000000000") {
+    throw new Error("Invalid staking token address");
+  }
+ 
   const stakingToken = new web3.eth.Contract(erc20Abi, stakingTokenAddress);
 
-  
+
   const approveTx = stakingToken.methods.approve(stakingContract.options.address, amount);
   const approveData = approveTx.encodeABI();
   const approveGas = await approveTx.estimateGas({ from: userAccount });
@@ -40,7 +43,7 @@ export const stakeTokens = async ({
 
   await web3.eth.sendSignedTransaction(approveTxSigned.rawTransaction!);
 
-  
+
   const stakeTx = stakingContract.methods.stake(amount);
   const stakeData = stakeTx.encodeABI();
   const stakeGas = await stakeTx.estimateGas({ from: userAccount });
@@ -115,7 +118,7 @@ export const getUserRewards = async (
 export const canWithdraw = async (
   stakingContract: Contract<AbiItem[]>,
   userAddress: string,
-  stakeId: number 
+  stakeId: number
 ): Promise<boolean> => {
   return await stakingContract.methods.canWithdraw(userAddress, stakeId).call();
 };
